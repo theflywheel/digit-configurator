@@ -217,11 +217,16 @@ export const mdmsService = {
   },
 
   async createTenant(stateTenantId: string, tenant: Tenant): Promise<MdmsRecord> {
-    // Build the full tenant data structure matching MDMS schema
+    // Build the full tenant data structure matching MDMS schema.
+    // tenant.tenants requires `tenantId` inside data (in addition to the
+    // Mdms.tenantId wrapper) — it stores the *parent* tenant this city lives
+    // under, e.g. for `ke.testzone` the parent is `ke`. Setting it to the
+    // tenant's own code (as the previous implementation did) is semantically
+    // wrong — MDMS inheritance relies on this being the parent.
     const tenantData = {
+      tenantId: stateTenantId,
       code: tenant.code,
       name: tenant.name,
-      tenantId: tenant.code,
       type: tenant.city?.ulbGrade || 'CITY',
       description: tenant.description || tenant.name,
       logoId: tenant.logoId || null,
