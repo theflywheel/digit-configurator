@@ -142,7 +142,8 @@ export const mdmsService = {
 
     return results.map((r) => ({
       serviceCode: r.serviceCode as string,
-      serviceName: (r.serviceName || r.name) as string,
+      name: (r.name || r.serviceName) as string,
+      keywords: (r.keywords as string) || '',
       department: r.department as string,
       slaHours: r.slaHours as number,
       menuPath: r.menuPath as string | undefined,
@@ -161,8 +162,8 @@ export const mdmsService = {
       complaintType.serviceCode,
       {
         serviceCode: complaintType.serviceCode,
-        name: complaintType.serviceName,
-        keywords: complaintType.serviceName.toLowerCase(),
+        name: complaintType.name,
+        keywords: complaintType.keywords,
         department: complaintType.department,
         slaHours: complaintType.slaHours,
         menuPath: complaintType.menuPath || 'Complaint',
