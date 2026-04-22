@@ -5,6 +5,11 @@ import { ArrowLeft, Save, RefreshCw } from 'lucide-react';
 import { DigitCard } from '@/components/digit/DigitCard';
 import { ActionBar } from '@/components/digit/ActionBar';
 import { Button } from '@/components/ui/button';
+import {
+  useMutationError,
+  MutationErrorBanner,
+  type MutationErrorInfo,
+} from './mutationError';
 
 export interface DigitEditProps {
   /** Page title */
@@ -22,9 +27,13 @@ export interface DigitEditProps {
 function DigitEditContent({
   title,
   children,
+  errorInfo,
+  onDismissError,
 }: {
   title?: string;
   children: React.ReactNode;
+  errorInfo: MutationErrorInfo | null;
+  onDismissError: () => void;
 }) {
   const { record, isPending, saving, error, defaultTitle, refetch } =
     useEditContext();
@@ -101,6 +110,7 @@ function DigitEditContent({
 
       {/* Form card */}
       <DigitCard className="max-w-none">
+        <MutationErrorBanner info={errorInfo} onDismiss={onDismissError} />
         <Form>
           <div className="space-y-4">
             {children}
@@ -131,9 +141,21 @@ function DigitEditContent({
 }
 
 export function DigitEdit({ title, children, resource, id, transform }: DigitEditProps) {
+  const { info, capture, clear } = useMutationError();
   return (
-    <EditBase resource={resource} id={id} mutationMode="pessimistic" transform={transform}>
-      <DigitEditContent title={title}>{children}</DigitEditContent>
+    <EditBase
+      resource={resource}
+      id={id}
+      mutationMode="pessimistic"
+      transform={transform}
+      mutationOptions={{
+        onError: (err) => capture(err),
+        onSuccess: () => clear(),
+      }}
+    >
+      <DigitEditContent title={title} errorInfo={info} onDismissError={clear}>
+        {children}
+      </DigitEditContent>
     </EditBase>
   );
 }

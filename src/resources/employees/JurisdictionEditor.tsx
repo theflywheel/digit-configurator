@@ -40,11 +40,16 @@ interface BoundaryRecord extends RaRecord {
 
 function toJurisdictionRow(entry: unknown, tenantId: string): EmployeeJurisdiction {
   const r = (entry && typeof entry === 'object' ? entry : {}) as Record<string, unknown>;
+  // HRMS DTO uses `hierarchy`; MDMS side uses `hierarchyType`. Read either, write both.
+  const hierarchyType =
+    (typeof r.hierarchyType === 'string' && r.hierarchyType) ||
+    (typeof r.hierarchy === 'string' && r.hierarchy) ||
+    '';
   return {
     id: typeof r.id === 'string' ? r.id : undefined,
     boundary: typeof r.boundary === 'string' ? r.boundary : '',
     boundaryType: typeof r.boundaryType === 'string' ? r.boundaryType : '',
-    hierarchyType: typeof r.hierarchyType === 'string' ? r.hierarchyType : '',
+    hierarchyType,
     isActive: typeof r.isActive === 'boolean' ? r.isActive : true,
     ...(typeof r.tenantId === 'string' ? { tenantId: r.tenantId } : { tenantId }),
   } as EmployeeJurisdiction & { tenantId: string };
@@ -121,6 +126,10 @@ export function JurisdictionEditor({
     field.onChange(
       next.map((r) => ({
         ...r,
+        // HRMS's DTO validates `hierarchy` (NotNull). Stamp both field names so
+        // either the legacy or MDMS-aligned reader is satisfied.
+        hierarchy: r.hierarchyType ?? '',
+        hierarchyType: r.hierarchyType ?? '',
         isActive: true,
         tenantId,
       })),
