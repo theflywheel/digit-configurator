@@ -111,27 +111,28 @@ export const localizationService = {
     ];
   },
 
-  // Create localization for a complaint type
+  // Create localization for a complaint type.
+  // We emit both the verbatim code and an uppercase variant for back-compat
+  // with consumers that lowercase/uppercase the serviceCode before lookup.
+  // Deduped so an already-uppercase serviceCode doesn't produce two identical
+  // rows — the backend's upsert rejects the whole batch on
+  // core.DUPLICATE_MESSAGE_IDENTITY when it sees the repeat.
   buildComplaintTypeLocalizations(
     _tenantId: string,
     serviceCode: string,
     name: string,
     locale: string = 'en_IN'
   ): LocalizationMessage[] {
-    return [
-      {
-        code: `SERVICEDEFS.${serviceCode}`,
-        message: name,
-        module: 'rainmaker-pgr',
-        locale,
-      },
-      {
-        code: `SERVICEDEFS.${serviceCode.toUpperCase()}`,
-        message: name,
-        module: 'rainmaker-pgr',
-        locale,
-      },
-    ];
+    const codes = new Set<string>([
+      `SERVICEDEFS.${serviceCode}`,
+      `SERVICEDEFS.${serviceCode.toUpperCase()}`,
+    ]);
+    return Array.from(codes).map((code) => ({
+      code,
+      message: name,
+      module: 'rainmaker-pgr',
+      locale,
+    }));
   },
 
   // Create localization for a boundary
