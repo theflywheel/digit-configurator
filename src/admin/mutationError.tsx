@@ -6,6 +6,39 @@ export interface MutationErrorInfo {
   message: string;
   code?: string;
   statusCode?: number;
+  hint?: string;
+}
+
+/** Map of DIGIT server error codes to actionable user-facing hints.
+ *  Outer codes (like ERR_HRMS_USER_CREATION_FAILED) wrap inner reasons the
+ *  service doesn't expose — the hints point operators at the most common
+ *  culprit so they don't need to open container logs to self-serve. */
+const CODE_HINTS: Record<string, string> = {
+  ERR_HRMS_USER_CREATION_FAILED:
+    'Most likely the mobile number does not match the tenant’s configured format, or the username / mobile is already in use on the user service. Check the Mobile Number field hint.',
+  ERR_HRMS_USER_EXIST_MOB:
+    'This mobile number is already registered. Use a different one.',
+  ERR_HRMS_USER_EXIST_USERNAME:
+    'This username is already taken. Change the Name (username auto-derives) or type a unique username.',
+  ERR_HRMS_EMPLOYEE_EXIST:
+    'An employee with this code already exists on the tenant.',
+  INVALID_MOBILE_FORMAT:
+    'Mobile does not match the tenant’s configured format.',
+  INVALID_USER_NAME:
+    'Username must be lowercase letters / digits / dots only.',
+  'CORE_COMMON_MOBILE_ERROR':
+    'Mobile does not match the tenant’s configured format.',
+};
+
+function codeHint(code: string | undefined): string | undefined {
+  if (!code) return undefined;
+  if (CODE_HINTS[code]) return CODE_HINTS[code];
+  // NotNull.foo.bar.baz -> "Required field missing: foo.bar.baz"
+  if (code.startsWith('NotNull.') || code.startsWith('NotEmpty.')) {
+    const path = code.split('.').slice(1).join('.');
+    return `Required field missing or empty: ${path}`;
+  }
+  return undefined;
 }
 
 export function extractMutationError(err: unknown): MutationErrorInfo {
@@ -20,7 +53,7 @@ export function extractMutationError(err: unknown): MutationErrorInfo {
         'Unknown error';
       const code = typeof errorsArr[0].code === 'string' ? errorsArr[0].code : undefined;
       const statusCode = typeof e.statusCode === 'number' ? e.statusCode : undefined;
-      return { message, code, statusCode };
+      return { message, code, statusCode, hint: codeHint(code) };
     }
     if (typeof e.message === 'string') {
       const statusCode = typeof e.statusCode === 'number' ? e.statusCode : undefined;
@@ -52,6 +85,9 @@ export function MutationErrorBanner({ info, onDismiss }: BannerProps) {
           <div className="min-w-0">
             <p className="font-medium">Save failed</p>
             <p className="text-sm mt-0.5 break-words">{info.message}</p>
+            {info.hint && (
+              <p className="text-sm mt-1 opacity-90">{info.hint}</p>
+            )}
             {(info.code || info.statusCode) && (
               <p className="text-xs opacity-70 mt-1 font-mono">
                 {info.statusCode ? `${info.statusCode} · ` : ''}

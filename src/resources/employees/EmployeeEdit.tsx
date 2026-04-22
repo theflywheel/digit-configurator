@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { DEFAULT_PASSWORD } from '@/api/config';
+import { useMobileValidator } from '@/admin/hrms/useMobileValidator';
 import { useApp } from '../../App';
 import { RolesEditor } from './RolesEditor';
 import { JurisdictionEditor } from './JurisdictionEditor';
@@ -173,6 +174,7 @@ function DeactivationReasonSection({ choices }: { choices: { value: string; labe
 export function EmployeeEdit() {
   const { state } = useApp();
   const tenantId = state.tenant;
+  const { validator: mobileValidate, rules: mobileRules } = useMobileValidator();
 
   const { data: reasonsList } = useGetList('deactivation-reasons', {
     pagination: { page: 1, perPage: 100 },
@@ -227,7 +229,12 @@ export function EmployeeEdit() {
           <DigitFormInput source="code" label="Employee Code" disabled />
           <DigitFormInput source="user.userName" label="Username" disabled />
           <DigitFormInput source="user.name" label="Name" validate={v.name} />
-          <DigitFormInput source="user.mobileNumber" label="Mobile Number" validate={v.required} />
+          <DigitFormInput
+            source="user.mobileNumber"
+            label="Mobile Number"
+            validate={mobileValidate}
+            help={mobileRules.errorMessage}
+          />
           <DigitFormInput source="user.emailId" label="Email" type="email" validate={v.emailOptional} />
           <DigitFormSelect
             source="user.gender"

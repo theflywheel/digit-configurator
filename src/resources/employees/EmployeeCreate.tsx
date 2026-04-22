@@ -1,6 +1,7 @@
 import { DigitCreate, DigitFormCodeInput, DigitFormInput, DigitFormSelect, v } from '@/admin';
 import { FieldSection } from '@/admin/fields';
 import { DEFAULT_PASSWORD } from '@/api/config';
+import { useMobileValidator } from '@/admin/hrms/useMobileValidator';
 import { useApp } from '../../App';
 import { RolesEditor } from './RolesEditor';
 import { JurisdictionEditor } from './JurisdictionEditor';
@@ -45,6 +46,7 @@ function toEpochMs(value: unknown): number | undefined {
 export function EmployeeCreate() {
   const { state } = useApp();
   const tenantId = state.tenant;
+  const { validator: mobileValidate, rules: mobileRules } = useMobileValidator();
 
   const defaults = {
     tenantId,
@@ -103,8 +105,8 @@ export function EmployeeCreate() {
           <DigitFormInput
             source="user.mobileNumber"
             label="Mobile Number"
-            validate={v.required}
-            help="Digits only"
+            validate={mobileValidate}
+            help={mobileRules.errorMessage}
           />
           <DigitFormInput
             source="user.userName"

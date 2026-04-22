@@ -67,6 +67,7 @@ export default function Phase4Page() {
   const [designations, setDesignations] = useState<Designation[]>([]);
   const [boundaries, setBoundaries] = useState<Boundary[]>([]);
   const [roles, setRoles] = useState<{ code: string; name: string; description?: string }[]>([]);
+  const [mobileRules, setMobileRules] = useState<{ pattern: string; minLength: number; maxLength: number; errorMessage: string } | null>(null);
   const [loadingRefs, setLoadingRefs] = useState(false);
 
   // Parsed employee data
@@ -86,16 +87,18 @@ export default function Phase4Page() {
   const fetchReferenceData = async () => {
     setLoadingRefs(true);
     try {
-      const [depts, desigs, bounds, fetchedRoles] = await Promise.all([
+      const [depts, desigs, bounds, fetchedRoles, fetchedMobileRules] = await Promise.all([
         mdmsService.getDepartments(state.tenant),
         mdmsService.getDesignations(state.tenant),
         boundaryService.searchBoundaries(state.tenant),
         mdmsService.getRoles(state.tenant).catch(() => [] as typeof roles),
+        mdmsService.getMobileValidation(state.tenant).catch(() => null),
       ]);
       setDepartments(depts);
       setDesignations(desigs);
       setBoundaries(bounds);
       setRoles(fetchedRoles);
+      setMobileRules(fetchedMobileRules);
     } catch (err) {
       console.error('Failed to fetch reference data:', err);
     } finally {
@@ -179,9 +182,20 @@ export default function Phase4Page() {
         }
       }
 
-      // Validate mobile number
-      if (emp.mobileNumber && !/^\d{10}$/.test(emp.mobileNumber)) {
-        errors.push('Invalid mobile number');
+      // Validate mobile number against the tenant's MDMS-configured pattern.
+      // If MDMS didn't return a rule, fall back to a lenient 9-10 digit check
+      // so we never silently block a valid number without a reason.
+      if (emp.mobileNumber) {
+        if (mobileRules) {
+          let compiled: RegExp | null = null;
+          try { compiled = new RegExp(mobileRules.pattern); } catch { compiled = null; }
+          const len = emp.mobileNumber.length;
+          if (len < mobileRules.minLength || len > mobileRules.maxLength || (compiled && !compiled.test(emp.mobileNumber))) {
+            errors.push(mobileRules.errorMessage);
+          }
+        } else if (!/^\d{9,10}$/.test(emp.mobileNumber)) {
+          errors.push('Mobile number must be 9-10 digits');
+        }
       }
 
       // Validate DOB (parser guarantees string, but double-check here)

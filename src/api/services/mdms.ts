@@ -270,4 +270,36 @@ export const mdmsService = {
       description: r.description as string | undefined,
     }));
   },
+
+  // ============================================
+  // Validation Rules (ValidationConfigs.mobileNumberValidation)
+  // ============================================
+
+  async getMobileValidation(tenantId: string): Promise<{
+    pattern: string;
+    minLength: number;
+    maxLength: number;
+    errorMessage: string;
+    prefix?: string;
+  } | null> {
+    const results = await this.search<Record<string, unknown>>(
+      tenantId,
+      'ValidationConfigs.mobileNumberValidation'
+    );
+    const preferred =
+      results.find((r) => r.validationName === 'defaultMobileValidation') ??
+      results[0];
+    if (!preferred) return null;
+    const rules = (preferred.rules as Record<string, unknown> | undefined) ?? {};
+    return {
+      pattern: typeof rules.pattern === 'string' ? rules.pattern : '^\\d{10}$',
+      minLength: typeof rules.minLength === 'number' ? rules.minLength : 10,
+      maxLength: typeof rules.maxLength === 'number' ? rules.maxLength : 10,
+      prefix: typeof rules.prefix === 'string' ? rules.prefix : undefined,
+      errorMessage:
+        typeof rules.errorMessage === 'string' && rules.errorMessage
+          ? rules.errorMessage
+          : 'Mobile number does not match the configured format',
+    };
+  },
 };
