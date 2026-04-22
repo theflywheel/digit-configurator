@@ -26,6 +26,7 @@ export const ENDPOINTS = {
   BOUNDARY_RELATIONSHIP_SEARCH: '/boundary-service/boundary-relationships/_search',
 
   // HRMS
+  // KEEP IN SYNC with packages/data-provider/src/client/endpoints.ts
   HRMS_EMPLOYEES_SEARCH: '/egov-hrms/employees/_search',
   HRMS_EMPLOYEES_CREATE: '/egov-hrms/employees/_create',
   HRMS_EMPLOYEES_UPDATE: '/egov-hrms/employees/_update',
@@ -61,12 +62,3 @@ export const OAUTH_CONFIG = {
 
 // Default employee password
 export const DEFAULT_PASSWORD = 'eGov@123';
-
-// Common roles for PGR/CRS
-export const PGR_ROLES = [
-  { code: 'EMPLOYEE', name: 'Employee', description: 'Basic employee role' },
-  { code: 'PGR_LME', name: 'Last Mile Employee', description: 'Handles complaints on ground' },
-  { code: 'GRO', name: 'Grievance Routing Officer', description: 'Routes complaints to departments' },
-  { code: 'PGR_ADMIN', name: 'PGR Administrator', description: 'Admin access to PGR module' },
-  { code: 'SUPERUSER', name: 'Super User', description: 'Full system access' },
-];

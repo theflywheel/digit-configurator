@@ -34,7 +34,6 @@ import {
   boundaryService,
   hrmsService,
   ApiClientError,
-  PGR_ROLES,
 } from '@/api';
 import { parseExcelFile, parseEmployeeExcel } from '@/utils/excelParser';
 import type {
@@ -67,6 +66,7 @@ export default function Phase4Page() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [designations, setDesignations] = useState<Designation[]>([]);
   const [boundaries, setBoundaries] = useState<Boundary[]>([]);
+  const [roles, setRoles] = useState<{ code: string; name: string; description?: string }[]>([]);
   const [loadingRefs, setLoadingRefs] = useState(false);
 
   // Parsed employee data
@@ -86,20 +86,18 @@ export default function Phase4Page() {
   const fetchReferenceData = async () => {
     setLoadingRefs(true);
     try {
-      // Fetch departments
-      const depts = await mdmsService.getDepartments(state.tenant);
+      const [depts, desigs, bounds, fetchedRoles] = await Promise.all([
+        mdmsService.getDepartments(state.tenant),
+        mdmsService.getDesignations(state.tenant),
+        boundaryService.searchBoundaries(state.tenant),
+        mdmsService.getRoles(state.tenant).catch(() => [] as typeof roles),
+      ]);
       setDepartments(depts);
-
-      // Fetch designations
-      const desigs = await mdmsService.getDesignations(state.tenant);
       setDesignations(desigs);
-
-      // Fetch boundaries
-      const bounds = await boundaryService.searchBoundaries(state.tenant);
       setBoundaries(bounds);
+      setRoles(fetchedRoles);
     } catch (err) {
       console.error('Failed to fetch reference data:', err);
-      // Don't show error - will validate on upload
     } finally {
       setLoadingRefs(false);
     }
@@ -146,7 +144,7 @@ export default function Phase4Page() {
     const deptCodes = departments.map((d) => d.code);
     const desigCodes = designations.map((d) => d.code);
     const boundaryCodes = boundaries.map((b) => b.code);
-    const validRoles = PGR_ROLES.map((r) => r.code);
+    const validRoles = roles.map((r) => r.code);
 
     return rawEmployees.map((emp) => {
       const errors: string[] = [];
@@ -186,6 +184,11 @@ export default function Phase4Page() {
         errors.push('Invalid mobile number');
       }
 
+      // Validate DOB (parser guarantees string, but double-check here)
+      if (!emp.dob || !/^\d{4}-\d{2}-\d{2}$/.test(emp.dob)) {
+        errors.push('Date of birth missing or malformed (expected YYYY-MM-DD)');
+      }
+
       return {
         ...emp,
         status: errors.length === 0 ? 'valid' : 'error',
@@ -211,10 +214,10 @@ export default function Phase4Page() {
         setProgressMessage(`Creating ${emp.name}...`);
 
         try {
-          // Parse roles
-          const roles = emp.roles
+          // Parse roles (empRoles to avoid shadowing the `roles` state)
+          const empRoles = emp.roles
             ? emp.roles.split(',').map((r) => {
-                const roleDef = PGR_ROLES.find((pr) => pr.code === r.trim());
+                const roleDef = roles.find((pr) => pr.code === r.trim());
                 return {
                   code: r.trim(),
                   name: roleDef?.name || r.trim(),
@@ -243,10 +246,10 @@ export default function Phase4Page() {
             mobileNumber: emp.mobileNumber,
             emailId: emp.emailId,
             gender: emp.gender,
-            dob: emp.dob ? new Date(emp.dob).getTime() : undefined,
+            dob: new Date(emp.dob).getTime(),
             department: emp.department,
             designation: emp.designation,
-            roles,
+            roles: empRoles,
             jurisdictions,
             dateOfAppointment: emp.dateOfAppointment
               ? new Date(emp.dateOfAppointment).getTime()
@@ -389,7 +392,7 @@ export default function Phase4Page() {
             <ul className="text-xs sm:text-sm text-muted-foreground mt-1 space-y-1">
               <li>• Departments: {departments.length} loaded</li>
               <li>• Designations: {designations.length} loaded</li>
-              <li>• Roles: {PGR_ROLES.length} available</li>
+              <li>• Roles: {roles.length} available</li>
               <li>• Boundaries: {boundaries.length} loaded</li>
             </ul>
           </div>
@@ -428,7 +431,7 @@ export default function Phase4Page() {
             <div className="grid grid-cols-2 gap-2 sm:gap-4 text-xs sm:text-sm mb-3 sm:mb-4">
               <div className="text-success">✓ Departments: {departments.length} loaded</div>
               <div className="text-success">✓ Designations: {designations.length} loaded</div>
-              <div className="text-success">✓ Roles: {PGR_ROLES.length} available</div>
+              <div className="text-success">✓ Roles: {roles.length} available</div>
               <div className="text-success">✓ Boundaries: {boundaries.length} loaded</div>
             </div>
 
@@ -439,6 +442,9 @@ export default function Phase4Page() {
               </li>
               <li>
                 • <strong>mobileNumber</strong> - 10-digit mobile number
+              </li>
+              <li>
+                • <strong>dob</strong> - Date of birth (YYYY-MM-DD)
               </li>
               <li>
                 • <strong>department</strong> - Department code
@@ -525,6 +531,7 @@ export default function Phase4Page() {
                     <TableHead className="text-xs sm:text-sm font-condensed">Status</TableHead>
                     <TableHead className="text-xs sm:text-sm font-condensed">Name</TableHead>
                     <TableHead className="text-xs sm:text-sm font-condensed">Mobile</TableHead>
+                    <TableHead className="text-xs sm:text-sm font-condensed">DOB</TableHead>
                     <TableHead className="text-xs sm:text-sm font-condensed">Dept</TableHead>
                     <TableHead className="text-xs sm:text-sm font-condensed">Designation</TableHead>
                     <TableHead className="text-xs sm:text-sm font-condensed">Roles</TableHead>
@@ -546,6 +553,7 @@ export default function Phase4Page() {
                       </TableCell>
                       <TableCell className="font-medium text-xs sm:text-sm">{emp.name}</TableCell>
                       <TableCell className="font-mono text-xs sm:text-sm">{emp.mobileNumber}</TableCell>
+                      <TableCell className="font-mono text-xs sm:text-sm">{emp.dob}</TableCell>
                       <TableCell className="text-xs sm:text-sm">
                         <span className={emp.status === 'error' ? 'text-destructive' : ''}>
                           {emp.department}

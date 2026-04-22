@@ -42,11 +42,69 @@ export const hrmsService = {
   },
 
   // ============================================
+  // Uniqueness Pre-flights
+  // ============================================
+
+  // Returns true when no existing EMPLOYEE user on the tenant owns the username.
+  // Any failure (network / rate-limit) falls back to "assume available"; HRMS
+  // will surface real conflicts as 4xx on _create.
+  async checkUsernameAvailable(tenantId: string, userName: string): Promise<boolean> {
+    try {
+      const response = await apiClient.post(ENDPOINTS.USER_SEARCH, {
+        RequestInfo: apiClient.buildRequestInfo({ action: '_search' }),
+        tenantId,
+        userName: [userName],
+        userType: 'EMPLOYEE',
+      });
+      const users = (response.user || []) as unknown[];
+      return users.length === 0;
+    } catch (err) {
+      console.warn('checkUsernameAvailable pre-flight failed; assuming available', err);
+      return true;
+    }
+  },
+
+  // Returns true when no existing EMPLOYEE user on the tenant owns the mobile.
+  async checkMobileAvailable(tenantId: string, mobileNumber: string): Promise<boolean> {
+    try {
+      const response = await apiClient.post(ENDPOINTS.USER_SEARCH, {
+        RequestInfo: apiClient.buildRequestInfo({ action: '_search' }),
+        tenantId,
+        mobileNumber,
+        userType: 'EMPLOYEE',
+      });
+      const users = (response.user || []) as unknown[];
+      return users.length === 0;
+    } catch (err) {
+      console.warn('checkMobileAvailable pre-flight failed; assuming available', err);
+      return true;
+    }
+  },
+
+  // ============================================
   // Employee Creation
   // ============================================
 
   // Create a single employee
   async createEmployee(employee: Employee): Promise<Employee> {
+    const tenantId = employee.tenantId;
+    const userName = employee.user?.userName;
+    const mobileNumber = employee.user?.mobileNumber;
+
+    if (tenantId && userName) {
+      const usernameAvailable = await this.checkUsernameAvailable(tenantId, userName);
+      if (!usernameAvailable) {
+        throw new Error(`Username "${userName}" already exists on tenant ${tenantId}`);
+      }
+    }
+
+    if (tenantId && mobileNumber) {
+      const mobileAvailable = await this.checkMobileAvailable(tenantId, mobileNumber);
+      if (!mobileAvailable) {
+        throw new Error(`Mobile "${mobileNumber}" already exists on tenant ${tenantId}`);
+      }
+    }
+
     const response = await apiClient.post(ENDPOINTS.HRMS_EMPLOYEES_CREATE, {
       RequestInfo: apiClient.buildRequestInfo({ action: '_create' }),
       Employees: [employee],
@@ -101,7 +159,7 @@ export const hrmsService = {
     mobileNumber: string;
     emailId?: string;
     gender?: string;
-    dob?: number;
+    dob: number;
     department: string;
     designation: string;
     roles: Role[];
@@ -110,12 +168,6 @@ export const hrmsService = {
     password?: string;
   }): Employee {
     const now = Date.now();
-    // HRMS validates user.dob with @NotNull. If the caller didn't provide
-    // one, fall back to 1990-01-01 UTC — otherwise the create fails the
-    // whole batch with NotNull.employeeRequest.employees[0].user.dob.
-    // TODO: surface DOB as a proper form field / Excel column so we're
-    // not silently defaulting real data.
-    const dob = data.dob ?? Date.UTC(1990, 0, 1);
 
     const user: EmployeeUser = {
       userName: data.userName.toLowerCase(),
@@ -124,7 +176,7 @@ export const hrmsService = {
       mobileNumber: data.mobileNumber,
       emailId: data.emailId,
       gender: data.gender,
-      dob,
+      dob: data.dob,
       type: 'EMPLOYEE',
       active: true,
       tenantId: data.tenantId,

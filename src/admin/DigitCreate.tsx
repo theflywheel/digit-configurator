@@ -1,10 +1,15 @@
 import React from 'react';
-import { CreateBase, useCreateContext, Form } from 'ra-core';
+import { CreateBase, useCreateContext, Form, type TransformData } from 'ra-core';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, RefreshCw } from 'lucide-react';
 import { DigitCard } from '@/components/digit/DigitCard';
 import { ActionBar } from '@/components/digit/ActionBar';
 import { Button } from '@/components/ui/button';
+import {
+  useMutationError,
+  MutationErrorBanner,
+  type MutationErrorInfo,
+} from './mutationError';
 
 export interface DigitCreateProps {
   /** Page title */
@@ -17,14 +22,20 @@ export interface DigitCreateProps {
   record?: Record<string, unknown>;
   /** Where to redirect after successful creation (default: "list") */
   redirect?: 'list' | 'edit' | 'show' | false;
+  /** Optional pre-submit transform (stamp server-required nested fields, etc.) */
+  transform?: TransformData;
 }
 
 function DigitCreateContent({
   title,
   children,
+  errorInfo,
+  onDismissError,
 }: {
   title?: string;
   children: React.ReactNode;
+  errorInfo: MutationErrorInfo | null;
+  onDismissError: () => void;
 }) {
   const { saving, defaultTitle } = useCreateContext();
   const navigate = useNavigate();
@@ -41,7 +52,6 @@ function DigitCreateContent({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={handleBack} className="gap-1.5">
           <ArrowLeft className="w-4 h-4" />
@@ -55,8 +65,8 @@ function DigitCreateContent({
         )}
       </div>
 
-      {/* Form card */}
       <DigitCard className="max-w-none">
+        <MutationErrorBanner info={errorInfo} onDismiss={onDismissError} />
         <Form>
           <div className="space-y-4">
             {children}
@@ -86,10 +96,22 @@ function DigitCreateContent({
   );
 }
 
-export function DigitCreate({ title, children, resource, record, redirect = 'list' }: DigitCreateProps) {
+export function DigitCreate({ title, children, resource, record, redirect = 'list', transform }: DigitCreateProps) {
+  const { info, capture, clear } = useMutationError();
   return (
-    <CreateBase resource={resource} record={record} redirect={redirect}>
-      <DigitCreateContent title={title}>{children}</DigitCreateContent>
+    <CreateBase
+      resource={resource}
+      record={record}
+      redirect={redirect}
+      transform={transform}
+      mutationOptions={{
+        onError: (err) => capture(err),
+        onSuccess: () => clear(),
+      }}
+    >
+      <DigitCreateContent title={title} errorInfo={info} onDismissError={clear}>
+        {children}
+      </DigitCreateContent>
     </CreateBase>
   );
 }
