@@ -1,5 +1,5 @@
 import React from 'react';
-import { EditBase, useEditContext, Form } from 'ra-core';
+import { EditBase, useEditContext, Form, type TransformData } from 'ra-core';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, RefreshCw } from 'lucide-react';
 import { DigitCard } from '@/components/digit/DigitCard';
@@ -15,6 +15,8 @@ export interface DigitEditProps {
   resource?: string;
   /** Record id (optional, from URL by default) */
   id?: string | number;
+  /** Optional pre-submit transform */
+  transform?: TransformData;
 }
 
 function DigitEditContent({
@@ -128,9 +130,9 @@ function DigitEditContent({
   );
 }
 
-export function DigitEdit({ title, children, resource, id }: DigitEditProps) {
+export function DigitEdit({ title, children, resource, id, transform }: DigitEditProps) {
   return (
-    <EditBase resource={resource} id={id} mutationMode="pessimistic">
+    <EditBase resource={resource} id={id} mutationMode="pessimistic" transform={transform}>
       <DigitEditContent title={title}>{children}</DigitEditContent>
     </EditBase>
   );

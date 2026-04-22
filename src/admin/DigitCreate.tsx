@@ -1,5 +1,5 @@
 import React from 'react';
-import { CreateBase, useCreateContext, Form } from 'ra-core';
+import { CreateBase, useCreateContext, Form, type TransformData } from 'ra-core';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, RefreshCw } from 'lucide-react';
 import { DigitCard } from '@/components/digit/DigitCard';
@@ -17,6 +17,8 @@ export interface DigitCreateProps {
   record?: Record<string, unknown>;
   /** Where to redirect after successful creation (default: "list") */
   redirect?: 'list' | 'edit' | 'show' | false;
+  /** Optional pre-submit transform (stamp server-required nested fields, etc.) */
+  transform?: TransformData;
 }
 
 function DigitCreateContent({
@@ -86,9 +88,9 @@ function DigitCreateContent({
   );
 }
 
-export function DigitCreate({ title, children, resource, record, redirect = 'list' }: DigitCreateProps) {
+export function DigitCreate({ title, children, resource, record, redirect = 'list', transform }: DigitCreateProps) {
   return (
-    <CreateBase resource={resource} record={record} redirect={redirect}>
+    <CreateBase resource={resource} record={record} redirect={redirect} transform={transform}>
       <DigitCreateContent title={title}>{children}</DigitCreateContent>
     </CreateBase>
   );
