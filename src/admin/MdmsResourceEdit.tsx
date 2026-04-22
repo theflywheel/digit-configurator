@@ -4,6 +4,7 @@ import { WidgetForFieldSpec } from './widgets';
 import { useEditContext, useResourceContext } from 'ra-core';
 import { getResourceConfig, getResourceLabel } from '@/providers/bridge';
 import { getDescriptor } from './schemaDescriptors';
+import { customEditors } from './themeEditor';
 
 function MdmsEditFields() {
   const resource = useResourceContext() ?? '';
@@ -58,7 +59,19 @@ function MdmsEditFields() {
 
 export function MdmsResourceEdit() {
   const resource = useResourceContext() ?? '';
+  const config = getResourceConfig(resource);
+  const descriptor = getDescriptor(config?.schema);
   const label = getResourceLabel(resource);
+
+  // Escape hatch: if the descriptor names a custom editor, mount that instead.
+  if (descriptor?.customEditor) {
+    const Editor = customEditors[descriptor.customEditor];
+    if (Editor) return <Editor />;
+    // Fall through to the generic form if the key is missing — dev warning.
+    // eslint-disable-next-line no-console
+    console.warn(`[descriptor] customEditor "${descriptor.customEditor}" not registered for schema ${config?.schema}; falling back to generic form.`);
+  }
+
   return (
     <DigitEdit title={`Edit ${label}`}>
       <MdmsEditFields />

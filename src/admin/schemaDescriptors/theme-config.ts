@@ -16,6 +16,7 @@ import type { SchemaDescriptor } from './types';
  */
 export const themeConfigDescriptor: SchemaDescriptor = {
   schema: 'common-masters.ThemeConfig',
+  customEditor: 'theme-config',
   groups: [
     { title: 'Identity', fields: ['code', 'name', 'version'] },
     { title: 'Primary / Link', fields: [

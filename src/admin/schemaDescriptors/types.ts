@@ -47,4 +47,9 @@ export interface SchemaDescriptor {
   schema: string;
   groups?: FieldGroup[];
   fields: FieldSpec[];
+  /** Opt into a dedicated custom editor (registered in src/admin/themeEditor/
+   *  or similar). When set, MdmsResourceEdit skips the generic form entirely
+   *  and mounts the registered component instead. String key (not a component
+   *  reference) keeps descriptors serializable and avoids circular imports. */
+  customEditor?: string;
 }
