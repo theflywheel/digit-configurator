@@ -3,6 +3,7 @@ import { ColorInput } from './ColorInput';
 import { RegexInput } from './RegexInput';
 import { ChipArrayInput } from './ChipArrayInput';
 import { DurationMsInput } from './DurationMsInput';
+import { BooleanInput } from './BooleanInput';
 import type { FieldSpec } from '../schemaDescriptors/types';
 
 interface WidgetDispatchProps {
@@ -27,17 +28,18 @@ export function WidgetForFieldSpec({ spec, source }: WidgetDispatchProps) {
       return <ChipArrayInput {...shared} help={spec.help} />;
     case 'duration-ms':
       return <DurationMsInput {...shared} help={spec.help} min={spec.min} max={spec.max} />;
+    case 'boolean':
+      return <BooleanInput {...shared} help={spec.help} />;
     case 'integer':
     case 'number':
-      return <DigitFormInput {...shared} type="number" />;
+      return <DigitFormInput {...shared} type="number" help={spec.help} />;
     case 'textarea':
       // No dedicated textarea component yet; fall back to plain text. TODO.
-      return <DigitFormInput {...shared} type="text" />;
-    case 'boolean':
+      return <DigitFormInput {...shared} type="text" help={spec.help} />;
     case 'text':
     default:
-      return <DigitFormInput {...shared} type="text" />;
+      return <DigitFormInput {...shared} type="text" help={spec.help} />;
   }
 }
 
-export { ColorInput, RegexInput, ChipArrayInput, DurationMsInput };
+export { ColorInput, RegexInput, ChipArrayInput, DurationMsInput, BooleanInput };
