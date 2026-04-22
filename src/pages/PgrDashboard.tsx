@@ -13,9 +13,12 @@ import {
   Filler,
 } from 'chart.js';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import { Download, Loader2 } from 'lucide-react';
 import { DigitCard } from '@/components/digit/DigitCard';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { usePgrDashboardData, type PgrStats } from '@/hooks/usePgrDashboardData';
+import { usePgrDashboardData, dateRangeFromPreset, type PgrStats, type DatePreset } from '@/hooks/usePgrDashboardData';
+import { useWeeklyReport, getCurrentWeekString, weekStringToDate } from '@/hooks/useWeeklyReport';
 
 // Register Chart.js components
 ChartJS.register(
@@ -75,6 +78,17 @@ const baseDoughnutOptions = {
     legend: { position: 'right' as const, labels: { usePointStyle: true, padding: 12, font: { size: 11 } } },
   },
 };
+
+// -- Date filter presets ----------------------------------------------------
+
+const DATE_PRESETS: { value: DatePreset; label: string }[] = [
+  { value: 'all', label: 'All Time' },
+  { value: 'today', label: 'Today' },
+  { value: 'yesterday', label: 'Yesterday' },
+  { value: 'week', label: 'This Week' },
+  { value: 'month', label: 'This Month' },
+  { value: '3months', label: '3 Months' },
+];
 
 // -- Components -------------------------------------------------------------
 
@@ -157,8 +171,12 @@ function BreakdownTable({ rows }: { rows: BreakdownRow[] }) {
 // -- Main Dashboard ---------------------------------------------------------
 
 export default function PgrDashboard() {
-  const { stats, isLoading, error } = usePgrDashboardData();
+  const [datePreset, setDatePreset] = useState<DatePreset>('all');
+  const dateRange = useMemo(() => dateRangeFromPreset(datePreset), [datePreset]);
+  const { stats, isLoading, error } = usePgrDashboardData(dateRange);
   const [activeTab, setActiveTab] = useState('boundary');
+  const { generate, isGenerating, error: reportError } = useWeeklyReport();
+  const [selectedWeek, setSelectedWeek] = useState(getCurrentWeekString);
 
   // Memoize chart data
   const cumulativeChart = useMemo(() => {
@@ -349,14 +367,59 @@ export default function PgrDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Title */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold font-condensed text-foreground">
-          PGR Dashboard
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Public Grievance Redressal &mdash; {stats.total} complaint{stats.total !== 1 ? 's' : ''}
-        </p>
+      {/* Title + Filters + Report Download */}
+      <div className="space-y-3">
+        <div className="flex items-start justify-between flex-wrap gap-2">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold font-condensed text-foreground">
+              PGR Dashboard
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Public Grievance Redressal &mdash; {stats.total} complaint{stats.total !== 1 ? 's' : ''}
+            </p>
+            {reportError && (
+              <p className="text-sm text-destructive mt-1">{reportError}</p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="week"
+              value={selectedWeek}
+              onChange={(e) => setSelectedWeek(e.target.value)}
+              className="border rounded px-2 py-1 text-sm bg-background text-foreground"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => generate(weekStringToDate(selectedWeek))}
+              disabled={isGenerating}
+            >
+              {isGenerating ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-1" />
+              ) : (
+                <Download className="w-4 h-4 mr-1" />
+              )}
+              {isGenerating ? 'Generating...' : 'Download Report'}
+            </Button>
+          </div>
+        </div>
+        {/* Date filter presets */}
+        <div className="flex items-center gap-1 flex-wrap">
+          {DATE_PRESETS.map((p) => (
+            <button
+              key={p.value}
+              onClick={() => setDatePreset(p.value)}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                datePreset === p.value
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+          {isLoading && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground ml-2" />}
+        </div>
       </div>
 
       {/* Row 1: Overview card + Cumulative line chart */}

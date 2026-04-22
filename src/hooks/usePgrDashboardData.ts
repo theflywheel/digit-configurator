@@ -190,9 +190,52 @@ function transformResponse(data: DashboardResponse): PgrStats {
   };
 }
 
+// ---------- Date range presets -----------------------------------------------
+
+export type DatePreset = 'all' | 'today' | 'yesterday' | 'week' | 'month' | '3months';
+
+export interface DateRange {
+  fromDate?: number; // epoch ms
+  toDate?: number;   // epoch ms
+}
+
+function startOfDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+export function dateRangeFromPreset(preset: DatePreset): DateRange {
+  if (preset === 'all') return {};
+  const now = new Date();
+  const todayStart = startOfDay(now);
+  const todayEnd = new Date(todayStart.getTime() + 86400000 - 1);
+
+  switch (preset) {
+    case 'today':
+      return { fromDate: todayStart.getTime(), toDate: todayEnd.getTime() };
+    case 'yesterday': {
+      const yd = new Date(todayStart.getTime() - 86400000);
+      return { fromDate: yd.getTime(), toDate: todayStart.getTime() - 1 };
+    }
+    case 'week': {
+      const weekAgo = new Date(todayStart.getTime() - 7 * 86400000);
+      return { fromDate: weekAgo.getTime(), toDate: todayEnd.getTime() };
+    }
+    case 'month': {
+      const monthAgo = new Date(todayStart);
+      monthAgo.setMonth(monthAgo.getMonth() - 1);
+      return { fromDate: monthAgo.getTime(), toDate: todayEnd.getTime() };
+    }
+    case '3months': {
+      const threeMonthsAgo = new Date(todayStart);
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      return { fromDate: threeMonthsAgo.getTime(), toDate: todayEnd.getTime() };
+    }
+  }
+}
+
 // ---------- Hook ------------------------------------------------------------
 
-export function usePgrDashboardData(): {
+export function usePgrDashboardData(dateRange?: DateRange): {
   stats: PgrStats | null;
   isLoading: boolean;
   error: unknown;
@@ -200,9 +243,12 @@ export function usePgrDashboardData(): {
   const tenantId = digitClient.stateTenantId;
 
   const { data, isPending, error } = useQuery<DashboardResponse>({
-    queryKey: ['pgr-dashboard', tenantId],
+    queryKey: ['pgr-dashboard', tenantId, dateRange?.fromDate, dateRange?.toDate],
     queryFn: async () => {
-      const res = await fetch(`/api/pgr/dashboard?tenantId=${encodeURIComponent(tenantId!)}`);
+      const params = new URLSearchParams({ tenantId: tenantId! });
+      if (dateRange?.fromDate) params.set('fromDate', String(dateRange.fromDate));
+      if (dateRange?.toDate) params.set('toDate', String(dateRange.toDate));
+      const res = await fetch(`/pgr-services/v2/dashboard?${params.toString()}`);
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || `HTTP ${res.status}`);

@@ -412,10 +412,15 @@ export class DigitApiClient {
 
   async pgrSearch(tenantId: string, options?: {
     serviceRequestId?: string; status?: string; limit?: number; offset?: number;
+    fromDate?: number; toDate?: number; sortBy?: string; sortOrder?: string;
   }): Promise<Record<string, unknown>[]> {
     const params = new URLSearchParams({ tenantId });
     if (options?.serviceRequestId) params.append('serviceRequestId', options.serviceRequestId);
     if (options?.status) params.append('applicationStatus', options.status);
+    if (options?.fromDate) params.append('fromDate', String(options.fromDate));
+    if (options?.toDate) params.append('toDate', String(options.toDate));
+    if (options?.sortBy) params.append('sortBy', options.sortBy);
+    if (options?.sortOrder) params.append('sortOrder', options.sortOrder);
     params.append('limit', String(options?.limit || 50));
     params.append('offset', String(options?.offset || 0));
 
