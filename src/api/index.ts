@@ -1,6 +1,6 @@
 // DIGIT API - Main Export
 export { apiClient, ApiClientError, DigitApiClient } from './client';
-export { getApiBaseUrl, ENDPOINTS, MDMS_SCHEMAS, OAUTH_CONFIG, DEFAULT_PASSWORD, PGR_ROLES } from './config';
+export { getApiBaseUrl, ENDPOINTS, MDMS_SCHEMAS, OAUTH_CONFIG, DEFAULT_PASSWORD } from './config';
 
 // Services
 export { mdmsService } from './services/mdms';
