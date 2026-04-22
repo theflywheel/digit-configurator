@@ -183,12 +183,34 @@ export default function CompletePage() {
             <strong className="text-sm font-condensed">Your complaints management system is ready!</strong>
           </div>
           <ul className="text-xs sm:text-sm space-y-1 sm:space-y-2 text-foreground">
-            <li>• Employees can login at <strong className="break-all text-primary">{state.environment.replace('https://', '')}</strong></li>
+            <li>
+              • Employees can login at{' '}
+              <a
+                href={`${state.environment}/digit-ui/employee/user/login`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="break-all text-primary underline hover:opacity-80"
+              >
+                {state.environment.replace(/^https?:\/\//, '')}/digit-ui/employee/user/login
+              </a>
+            </li>
+            <li>
+              • Citizens can file complaints at{' '}
+              <a
+                href={`${state.environment}/digit-ui/citizen`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="break-all text-primary underline hover:opacity-80"
+              >
+                {state.environment.replace(/^https?:\/\//, '')}/digit-ui/citizen
+              </a>
+            </li>
             <li>• Access complaint management based on their roles</li>
             <li>• Handle complaints in their assigned jurisdictions</li>
           </ul>
           <p className="mt-3 sm:mt-4 pt-3 border-t border-success/20 text-xs sm:text-sm">
-            <strong>Default credentials:</strong> username / <code className="bg-muted px-1 rounded text-primary">eGov@123</code>
+            <strong>Default credentials:</strong> the employee's <em>code</em> (e.g. <code className="bg-muted px-1 rounded text-primary">TEST_EMP_001</code>) as username, password{' '}
+            <code className="bg-muted px-1 rounded text-primary">eGov@123</code>. HRMS overrides the supplied <code className="bg-muted px-1 rounded">userName</code> with the employee code on create — that's the value that actually authenticates.
           </p>
         </div>
 
